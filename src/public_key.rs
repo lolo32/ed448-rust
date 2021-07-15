@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use core::convert::TryFrom;
+use std::convert::TryInto;
 
 use num_bigint::{BigInt, Sign};
 
@@ -27,17 +28,22 @@ use crate::{
 ///
 /// You can extract a `PublicKey` by calling [`Self::from()`].
 #[derive(Clone)]
-pub struct PublicKey(Point);
+pub struct PublicKey(Point, Option<[u8; KEY_LENGTH]>);
 
 opaque_debug::implement!(PublicKey);
 
 impl PublicKey {
-    /// Convert the public key to an easily exportable format.
     #[inline]
     #[must_use]
-    pub fn as_byte(&self) -> [u8; 57] {
+    pub(crate) fn as_byte(&self) -> [u8; 57] {
         // 4.  The public key A is the encoding of the point [s]B.
         self.0.encode()
+    }
+
+    /// Convert the public key to an easily exportable format.
+    #[inline]
+    pub fn as_bytes(&self) -> Option<[u8; 57]> {
+        self.1
     }
 
     /// Verify signature with public key.
@@ -144,7 +150,7 @@ impl From<&PrivateKey> for PublicKey {
         let (s, _) = &private_key.expand();
         // 3.  Interpret the buffer as the little-endian integer, forming a
         //     secret scalar s.
-        Self::from(BigInt::from_bytes_le(Sign::Plus, s))
+        Self::from((BigInt::from_bytes_le(Sign::Plus, s), *s))
     }
 }
 
@@ -157,21 +163,33 @@ impl From<BigInt> for PublicKey {
         let A = Point::default() * s;
 
         // 4.  The public key A is the encoding of the point [s]B.
-        Self(A)
+        Self(A, None)
+    }
+}
+
+#[doc(hidden)]
+impl From<(BigInt, [u8; KEY_LENGTH])> for PublicKey {
+    #[inline]
+    fn from(s: (BigInt, [u8; KEY_LENGTH])) -> Self {
+        //     Perform a known-base-point scalar multiplication [s]B.
+        let A = Point::default() * s.0;
+
+        // 4.  The public key A is the encoding of the point [s]B.
+        Self(A, Some(s.1))
     }
 }
 
 impl From<[u8; KEY_LENGTH]> for PublicKey {
     #[inline]
     fn from(array: [u8; KEY_LENGTH]) -> Self {
-        Self::from(BigInt::from_bytes_le(Sign::Plus, &array))
+        Self::from((BigInt::from_bytes_le(Sign::Plus, &array), array))
     }
 }
 
 impl From<&'_ [u8; KEY_LENGTH]> for PublicKey {
     #[inline]
     fn from(array: &'_ [u8; KEY_LENGTH]) -> Self {
-        Self::from(BigInt::from_bytes_le(Sign::Plus, array))
+        Self::from((BigInt::from_bytes_le(Sign::Plus, array), *array))
     }
 }
 
@@ -183,7 +201,8 @@ impl TryFrom<&[u8]> for PublicKey {
         if array.len() != KEY_LENGTH {
             return Err(Ed448Error::WrongPublicKeyLength);
         }
-        Ok(Self::from(BigInt::from_bytes_le(Sign::Plus, array)))
+        let a: [u8; KEY_LENGTH] = array.try_into().unwrap();
+        Ok(Self::from(a))
     }
 }
 
