@@ -27,7 +27,7 @@ use crate::{
 /// This is a public key. _Should be distributed._
 ///
 /// You can extract a `PublicKey` by calling [`Self::from()`].
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PublicKey(Point, Option<[u8; KEY_LENGTH]>);
 
 opaque_debug::implement!(PublicKey);

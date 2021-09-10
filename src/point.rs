@@ -60,7 +60,7 @@ lazy_static! {
     );
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Hash)]
 pub struct Field(BigInt);
 
 impl Field {
@@ -248,7 +248,7 @@ impl Div<&'_ Field> for &'_ Field {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Hash)]
 pub struct Point {
     x: Field,
     y: Field,

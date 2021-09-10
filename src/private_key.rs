@@ -33,7 +33,7 @@ pub(crate) type SeedRaw = [u8; KEY_LENGTH];
 /// This represent a private key. **Must be kept secret.**
 ///
 /// Could be used to generate a new one or restore an older already saved.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct PrivateKey(PrivateKeyRaw);
 
 opaque_debug::implement!(PrivateKey);
