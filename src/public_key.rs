@@ -164,14 +164,14 @@ impl From<BigInt> for PublicKey {
 impl From<[u8; KEY_LENGTH]> for PublicKey {
     #[inline]
     fn from(array: [u8; KEY_LENGTH]) -> Self {
-        Self::from(BigInt::from_bytes_le(Sign::Plus, &array))
+        Self(Point::decode(&array).expect("bad ed448 public key"))
     }
 }
 
 impl From<&'_ [u8; KEY_LENGTH]> for PublicKey {
     #[inline]
     fn from(array: &'_ [u8; KEY_LENGTH]) -> Self {
-        Self::from(BigInt::from_bytes_le(Sign::Plus, array))
+        Self(Point::decode(array).expect("bad ed448 public key"))
     }
 }
 
@@ -183,7 +183,7 @@ impl TryFrom<&[u8]> for PublicKey {
         if array.len() != KEY_LENGTH {
             return Err(Ed448Error::WrongPublicKeyLength);
         }
-        Ok(Self::from(BigInt::from_bytes_le(Sign::Plus, array)))
+        Ok(Self(Point::decode(array)?))
     }
 }
 
@@ -244,10 +244,12 @@ mod tests {
     #[test]
     fn instantiate_pubkey() {
         let pkey = PrivateKey::new(&mut OsRng);
-        let pkey_slice = *pkey.as_bytes();
+        let pub_key0 = PublicKey::from(&pkey);
+        let pkey_slice = pub_key0.as_byte();
         let pub_key1 = PublicKey::from(&pkey_slice);
         let pub_key2 = PublicKey::from(pkey_slice);
 
+        assert_eq!(pub_key0.as_byte(), pub_key1.as_byte());
         assert_eq!(pub_key1.as_byte(), pub_key2.as_byte());
     }
 
@@ -268,9 +270,9 @@ mod tests {
     #[test]
     fn wrong_with_forged_pub_key() {
         let secret = PrivateKey::new(&mut OsRng);
-        let public = PublicKey::from(&[255; KEY_LENGTH]);
+        let bogus = PrivateKey::new(&mut OsRng);
+        let public = PublicKey::from(&bogus);
         let msg = b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nec.";
-        // One dot missing at the end
         let sig = secret.sign(msg, None).unwrap();
         assert_eq!(
             public.verify(msg, &sig, None).unwrap_err(),
@@ -283,7 +285,6 @@ mod tests {
         let secret = PrivateKey::new(&mut OsRng);
         let public = PublicKey::from(&secret);
         let msg = b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nec.";
-        // One dot missing at the end
         let sig = [1; SIG_LENGTH];
         assert_eq!(
             public.verify(msg, &sig, None).unwrap_err(),

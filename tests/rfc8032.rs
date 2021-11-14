@@ -163,6 +163,9 @@ fn ed448() {
         assert_eq!(&sig_[..], &sig[..]);
 
         pub_k.verify(&msg, &sig, context.as_deref()).unwrap();
+
+        let pub_k2 = PublicKey::try_from(&pub_key[..]).unwrap();
+        pub_k2.verify(&msg, &sig, context.as_deref()).unwrap();
     })
 }
 
@@ -211,5 +214,8 @@ fn ed448ph() {
         assert_eq!(&sig_[..], &sig[..]);
 
         pub_k.verify_ph(&msg, &sig, context.as_deref()).unwrap();
+
+        let pub_k2 = PublicKey::try_from(&pub_key[..]).unwrap();
+        pub_k2.verify_ph(&msg, &sig, context.as_deref()).unwrap();
     })
 }
