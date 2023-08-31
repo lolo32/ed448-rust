@@ -155,9 +155,6 @@ impl TryFrom<&[u8]> for PublicKey {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "std")]
-    use std::convert::TryFrom;
-
     use super::*;
 
     #[cfg(feature = "std")]
