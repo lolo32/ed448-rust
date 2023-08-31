@@ -19,7 +19,7 @@ use num_bigint::{BigInt, Sign};
 #[cfg(feature = "std")]
 use rand_core::{CryptoRng, RngCore};
 use sha3::{
-    digest::{ExtendableOutput, Update},
+    digest::{ExtendableOutput, Update, XofReader},
     Shake256,
 };
 
@@ -70,9 +70,9 @@ impl PrivateKey {
     pub(crate) fn expand(&self) -> (PrivateKeyRaw, SeedRaw) {
         // 1.  Hash the 57-byte private key using SHAKE256(x, 114), storing the
         //     digest in a 114-octet large buffer, denoted h.
-        let h = Shake256::default()
-            .chain(self.as_bytes())
-            .finalize_boxed(114);
+        let mut h = [0_u8; 114];
+        Shake256::default()
+            .chain(self.as_bytes()).finalize_xof().read(&mut h);
         //     Only the lower 57 bytes are used for generating the public key.
         let mut s: [u8; KEY_LENGTH] = h[..KEY_LENGTH].try_into().unwrap();
 

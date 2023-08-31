@@ -119,8 +119,9 @@
 extern crate alloc;
 use alloc::{vec::Vec, boxed::Box, borrow::Cow};
 use sha3::{
-    digest::{ExtendableOutput, Update},
+    digest::{ExtendableOutput, Update, XofReader},
     Shake256,
+    Sha3_256
 };
 
 pub use crate::error::Ed448Error;
@@ -179,7 +180,9 @@ fn shake256(items: Vec<&[u8]>, ctx: &[u8], pre_hash: PreHash) -> Box<[u8]> {
     for item in items {
         shake.update(item);
     }
-    shake.finalize_boxed(114)
+    let mut h = [0_u8; 114];
+    shake.finalize_xof().read(&mut h);
+    Box::new(h)
 }
 
 /// Common tasks for signing/verifying
@@ -198,7 +201,10 @@ fn init_sig<'a, 'b>(
     let msg = match pre_hash {
         PreHash::False => Cow::Borrowed(msg),
         PreHash::True => {
-            let hash = Shake256::default().chain(msg).finalize_boxed(64).to_vec();
+            let mut h = [0_u8; 64];
+            Shake256::default().chain(msg).finalize_xof().read(&mut h);
+
+            let hash = h.to_vec();
             Cow::Owned(hash)
         }
     };
