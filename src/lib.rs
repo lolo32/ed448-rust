@@ -121,13 +121,13 @@ use alloc::{vec::Vec, boxed::Box, borrow::Cow};
 use sha3::{
     digest::{ExtendableOutput, Update, XofReader},
     Shake256,
-    Sha3_256
 };
 
 pub use crate::error::Ed448Error;
 
 pub use private_key::PrivateKey;
 pub use public_key::PublicKey;
+pub use point::Point;
 
 mod error;
 mod point;
