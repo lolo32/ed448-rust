@@ -14,6 +14,7 @@
 
 use core::convert::TryFrom;
 
+use alloc::vec;
 use num_bigint::{BigInt, Sign};
 
 use crate::{
@@ -40,42 +41,6 @@ impl PublicKey {
         self.0.encode()
     }
 
-    /// Verify signature with public key.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use rand_core::OsRng;
-    /// use ed448_rust::{PublicKey, Ed448Error};
-    /// # let private_key = ed448_rust::PrivateKey::new(&mut OsRng);
-    /// let message = b"Signed message to verify";
-    /// # let retrieve_signature = || private_key.sign(message, None).unwrap();
-    /// # let retrieve_pubkey = || PublicKey::from(&private_key);
-    /// let public_key = retrieve_pubkey();
-    /// let signature = retrieve_signature();
-    /// match public_key.verify(message, &signature, None) {
-    ///     Ok(()) => {
-    ///         // Signature OK, use the message
-    ///     }
-    ///     Err(Ed448Error::InvalidSignature) => {
-    ///         // The verification of the signature is invalid
-    ///     }
-    ///     Err(Ed448Error::ContextTooLong) => {
-    ///         // The used context is more than 255 bytes length
-    ///     }
-    ///     Err(Ed448Error::WrongSignatureLength) => {
-    ///         // The signature is not 144 bytes length
-    ///     }
-    ///     Err(_) => unreachable!()
-    /// }
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// * [`Ed448Error::InvalidSignature`] if the signature is not valid, either the public key
-    ///   or the signature used are not the right, or the message has been altered.
-    /// * [`Ed448Error::ContextTooLong`] if the optional context is more than 255 byte length.
-    /// * [`Ed448Error::WrongSignatureLength`] if the signature is not `SIG_LENGTH` byte.
     #[inline]
     pub fn verify(&self, msg: &[u8], sign: &[u8], ctx: Option<&[u8]>) -> crate::Result<()> {
         self.verify_real(msg, sign, ctx, PreHash::False)
@@ -189,9 +154,12 @@ impl TryFrom<&[u8]> for PublicKey {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "std")]
     use std::convert::TryFrom;
 
     use super::*;
+    
+    #[cfg(feature = "std")]
     use rand_core::OsRng;
 
     #[test]
@@ -213,6 +181,7 @@ mod tests {
         assert_eq!(&public.as_byte()[..], &ref_public[..]);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn wrong_verification_with_another_pub_key() {
         let secret_1 = PrivateKey::new(&mut OsRng);
@@ -231,6 +200,7 @@ mod tests {
         assert_eq!(pub_key.unwrap_err(), Ed448Error::WrongPublicKeyLength);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn wrong_sign_length() {
         let pubkey = PublicKey::from(&PrivateKey::new(&mut OsRng));
@@ -241,6 +211,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn instantiate_pubkey() {
         let pkey = PrivateKey::new(&mut OsRng);
@@ -251,6 +222,7 @@ mod tests {
         assert_eq!(pub_key1.as_byte(), pub_key2.as_byte());
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn wrong_with_altered_message() {
         let secret = PrivateKey::new(&mut OsRng);
@@ -265,6 +237,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn wrong_with_forged_pub_key() {
         let secret = PrivateKey::new(&mut OsRng);
@@ -278,6 +251,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn wrong_with_forged_signature() {
         let secret = PrivateKey::new(&mut OsRng);
