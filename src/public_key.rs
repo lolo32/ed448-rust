@@ -43,6 +43,13 @@ impl PublicKey {
     }
 
     #[inline]
+    #[must_use]
+    pub fn from_byte(s: [u8; 57]) -> Result<Self, Ed448Error> {
+        // 4.  The public key A is the encoding of the point [s]B.
+        Ok(Self(Point::decode(&s)?))
+    }
+
+    #[inline]
     pub fn verify(&self, msg: &[u8], sign: &[u8], ctx: Option<&[u8]>) -> crate::Result<()> {
         self.verify_real(msg, sign, ctx, PreHash::False)
     }
