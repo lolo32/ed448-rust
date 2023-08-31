@@ -28,6 +28,7 @@ use subtle::{Choice, ConstantTimeEq};
 lazy_static! {
     // 2 ^ 448 - 2 ^224 - 1
     static ref p: BigInt = BigInt::from(2).pow(448).sub(BigInt::from(2).pow(224)) - 1;
+    static ref m: BigInt = BigInt::from(2).pow(455);
     static ref d: Field = Field::new(BigInt::from(-39081));
     static ref f0: Field = Field::new(BigInt::zero());
     static ref f1: Field = Field::new(BigInt::one());
@@ -335,7 +336,7 @@ impl Point {
 
     /// Unserialize number from bits.
     fn frombytes(x: &[u8]) -> crate::Result<Field> {
-        let rv = BigInt::from_bytes_le(Sign::Plus, x) % BigInt::from(2).pow(455);
+        let rv = BigInt::from_bytes_le(Sign::Plus, x) % &m as &BigInt;
         if &rv < &p as &BigInt {
             Ok(Field::new(rv))
         } else {
