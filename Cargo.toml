@@ -9,23 +9,33 @@ repository = "https://github.com/lolo32/ed448-rust"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies]
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+
 [features]
-docinclude = [] # Used only for activating `doc(include="...")` on stable.
+default = ["std"]
+std = []
 
 [dependencies.lazy_static]
 version = "1.4.0"
+features = ["spin_no_std"]
 
 [dependencies.num-bigint]
 version = "0.4.0"
+default-features = false
+features = ["serde"]
 
 [dependencies.num-integer]
 version = "0.1.44"
+default-features = false
 
 [dependencies.num-traits]
 version = "0.2.14"
+default-features = false
 
 [dependencies.opaque-debug]
 version = "0.3.0"
+default-features = false
 
 [dependencies.rand_core]
 version = "0.6.2"
@@ -34,22 +44,20 @@ features = ["alloc"]
 
 [dependencies.sha3]
 version = "0.9.1"
+default-features = false
 
 [dependencies.subtle]
 version = "2.4.0"
 default-features = false
-features = ["std"]
 
 [dev-dependencies.base64]
 version = "0.13.0"
+default-features = false
 
 [dev-dependencies.hex]
 version = "0.4.3"
 
 [dev-dependencies.rand_core]
 version = "0.6.2"
+default-features = false
 features = ["getrandom"]
-
-[package.metadata.docs.rs]
-rustc-args = ["--cfg", "docsrs"]
-features = ["docinclude"] # Activate `docinclude` during docs.rs build.

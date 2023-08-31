@@ -1,3 +1,5 @@
+#![no_std]
+
 // Copyright 2021 Lolo_32
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +16,6 @@
 
 #![cfg_attr(feature = "docinclude", feature(external_doc))]
 #![deny(
-    missing_docs,
     missing_copy_implementations,
     missing_debug_implementations,
     trivial_numeric_casts,
@@ -115,94 +116,10 @@
     clippy::module_name_repetitions
 )]
 
-//! # EdDSA implementation for ed448
-//!
-//! This is a Edwards-Curve Digital Signature Algorithm (EdDSA) for ed448 only
-//! in pure rust.
-//!
-//! # Usage
-//!
-//! There is two variants that can be combined to sign/verify:
-//!
-//! 1. [`PrivateKey::sign`](crate::PrivateKey::sign) to sign all the content
-//!    as-it and [`PrivateKey::sign_ph`](crate::PrivateKey::sign_ph) to
-//!    pre-hash the message internaly before signing it. It will be hashed
-//!    using Shake256 and the result of 64 byte will be signed/verified.
-//!    
-//!    Note: use the same variant for verifying the signature.
-//!
-//! 2. The second parameter of [`sign`](crate::PrivateKey::sign)/
-//!    [`sign_ph`](crate::PrivateKey::sign_ph) and the third of
-//!    [`verify`](crate::PublicKey::verify)/
-//!    [`verify_ph`](crate::PublicKey::verify_ph) if an optional context
-//!    of 255 byte length max.
-//!    
-//!    The context can be used to facilitate different signature over
-//!    different protocol, but it must be immuable over the protocol.
-//!    More information about this can be found at
-//!    [RFC 8032 Use of Contexts](https://tools.ietf.org/html/rfc8032#section-8.3).
-//!
-//! # Examples
-//!
-//! ## Generating a new key pair
-//!
-//! ```
-//! use rand_core::OsRng;
-//! use ed448_rust::{PrivateKey, PublicKey};
-//! let private_key = PrivateKey::new(&mut OsRng);
-//! let public_key = PublicKey::from(&private_key);
-//! ```
-//!
-//! ## Sign a message
-//!
-//! ```
-//! # use rand_core::OsRng;
-//! use ed448_rust::{PrivateKey, Ed448Error};
-//! # let retrieve_pkey = || PrivateKey::new(&mut OsRng);
-//! let message = b"Message to sign";
-//! let private_key = retrieve_pkey();
-//! match private_key.sign(message, None) {
-//!     Ok(signature) => {
-//!         // Signature OK, use it
-//!         // This is a slice of 144 byte length
-//!     }
-//!     Err(Ed448Error::ContextTooLong) => {
-//!         // The used context is more than 255 bytes length
-//!     }
-//!     Err(_) => unreachable!()
-//! }
-//! ```
-//!
-//! ## Verify a signature
-//!
-//! ```
-//! # use rand_core::OsRng;
-//! use ed448_rust::{PublicKey, Ed448Error};
-//! # let private_key = ed448_rust::PrivateKey::new(&mut OsRng);
-//! let message = b"Signed message to verify";
-//! # let retrieve_signature = || private_key.sign(message, None).unwrap();
-//! # let retrieve_pubkey = || PublicKey::from(&private_key);
-//! let public_key = retrieve_pubkey(); // A slice or array of KEY_LENGTH byte length
-//! let signature = retrieve_signature(); // A slice or array of SIG_LENGTH byte length
-//! match public_key.verify(message, &signature, None) {
-//!     Ok(()) => {
-//!         // Signature OK, use the message
-//!     }
-//!     Err(Ed448Error::InvalidSignature) => {
-//!         // The verification of the signature is invalid
-//!     }
-//!     Err(Ed448Error::ContextTooLong) => {
-//!         // The used context is more than 255 bytes length
-//!     }
-//!     Err(Ed448Error::WrongSignatureLength) => {
-//!         // The signature is not 144 bytes length
-//!     }
-//!     Err(_) => unreachable!()
-//! }
-//! ```
-
+extern crate alloc;
+use alloc::{vec::Vec, boxed::Box, borrow::Cow};
 use sha3::{
-    digest::{ExtendableOutput, Update},
+    digest::{ExtendableOutput, Update, XofReader},
     Shake256,
 };
 
@@ -210,7 +127,7 @@ pub use crate::error::Ed448Error;
 
 pub use private_key::PrivateKey;
 pub use public_key::PublicKey;
-use std::borrow::Cow;
+pub use point::Point;
 
 mod error;
 mod point;
@@ -263,7 +180,9 @@ fn shake256(items: Vec<&[u8]>, ctx: &[u8], pre_hash: PreHash) -> Box<[u8]> {
     for item in items {
         shake.update(item);
     }
-    shake.finalize_boxed(114)
+    let mut h = [0_u8; 114];
+    shake.finalize_xof().read(&mut h);
+    Box::new(h)
 }
 
 /// Common tasks for signing/verifying
@@ -282,7 +201,10 @@ fn init_sig<'a, 'b>(
     let msg = match pre_hash {
         PreHash::False => Cow::Borrowed(msg),
         PreHash::True => {
-            let hash = Shake256::default().chain(msg).finalize_boxed(64).to_vec();
+            let mut h = [0_u8; 64];
+            Shake256::default().chain(msg).finalize_xof().read(&mut h);
+
+            let hash = h.to_vec();
             Cow::Owned(hash)
         }
     };

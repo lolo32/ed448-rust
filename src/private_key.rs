@@ -14,10 +14,12 @@
 
 use core::convert::{TryFrom, TryInto};
 
+use alloc::vec;
 use num_bigint::{BigInt, Sign};
+#[cfg(feature = "std")]
 use rand_core::{CryptoRng, RngCore};
 use sha3::{
-    digest::{ExtendableOutput, Update},
+    digest::{ExtendableOutput, Update, XofReader},
     Shake256,
 };
 
@@ -48,6 +50,8 @@ impl PrivateKey {
     /// use ed448_rust::PrivateKey;
     /// let private_key = PrivateKey::new(&mut OsRng);
     /// ```
+    
+    #[cfg(feature = "std")]
     pub fn new<T>(rnd: &mut T) -> Self
     where
         T: CryptoRng + RngCore,
@@ -57,16 +61,6 @@ impl PrivateKey {
         Self::from(key)
     }
 
-    /// Convert the private key to a format exportable.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use rand_core::OsRng;
-    /// # use ed448_rust::PrivateKey;
-    /// # let private_key = PrivateKey::new(&mut OsRng);
-    /// let exportable_pkey = private_key.as_bytes();
-    /// ```
     #[inline]
     #[must_use]
     pub const fn as_bytes(&self) -> &[u8; KEY_LENGTH] {
@@ -76,9 +70,9 @@ impl PrivateKey {
     pub(crate) fn expand(&self) -> (PrivateKeyRaw, SeedRaw) {
         // 1.  Hash the 57-byte private key using SHAKE256(x, 114), storing the
         //     digest in a 114-octet large buffer, denoted h.
-        let h = Shake256::default()
-            .chain(self.as_bytes())
-            .finalize_boxed(114);
+        let mut h = [0_u8; 114];
+        Shake256::default()
+            .chain(self.as_bytes()).finalize_xof().read(&mut h);
         //     Only the lower 57 bytes are used for generating the public key.
         let mut s: [u8; KEY_LENGTH] = h[..KEY_LENGTH].try_into().unwrap();
 
@@ -230,8 +224,10 @@ impl From<&'_ PrivateKeyRaw> for PrivateKey {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "std")]
     use rand_core::OsRng;
 
+    #[cfg(feature = "std")]
     #[test]
     fn create_new_pkey() {
         let pkey = PrivateKey::new(&mut OsRng);
@@ -245,6 +241,7 @@ mod tests {
         assert_eq!(invalid_pk.unwrap_err(), Ed448Error::WrongKeyLength);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn invalid_context_length() {
         let pkey = PrivateKey::new(&mut OsRng);

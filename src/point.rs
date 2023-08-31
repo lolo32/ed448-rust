@@ -20,6 +20,7 @@ use core::{
 use lazy_static::lazy_static;
 use num_bigint::{BigInt, Sign};
 use num_traits::{One, Zero};
+use serde::{Serialize, Deserialize};
 
 use crate::{Ed448Error, KEY_LENGTH};
 use subtle::{Choice, ConstantTimeEq};
@@ -27,6 +28,7 @@ use subtle::{Choice, ConstantTimeEq};
 lazy_static! {
     // 2 ^ 448 - 2 ^224 - 1
     static ref p: BigInt = BigInt::from(2).pow(448).sub(BigInt::from(2).pow(224)) - 1;
+    static ref m: BigInt = BigInt::from(2).pow(455);
     static ref d: Field = Field::new(BigInt::from(-39081));
     static ref f0: Field = Field::new(BigInt::zero());
     static ref f1: Field = Field::new(BigInt::one());
@@ -60,7 +62,7 @@ lazy_static! {
     );
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Field(BigInt);
 
 impl Field {
@@ -248,7 +250,7 @@ impl Div<&'_ Field> for &'_ Field {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Point {
     x: Field,
     y: Field,
@@ -334,7 +336,7 @@ impl Point {
 
     /// Unserialize number from bits.
     fn frombytes(x: &[u8]) -> crate::Result<Field> {
-        let rv = BigInt::from_bytes_le(Sign::Plus, x) % BigInt::from(2).pow(455);
+        let rv = BigInt::from_bytes_le(Sign::Plus, x) % &m as &BigInt;
         if &rv < &p as &BigInt {
             Ok(Field::new(rv))
         } else {
