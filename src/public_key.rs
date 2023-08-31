@@ -16,6 +16,7 @@ use core::convert::TryFrom;
 
 use alloc::vec;
 use num_bigint::{BigInt, Sign};
+use serde::{Serialize, Deserialize};
 
 use crate::{
     init_sig,
@@ -27,7 +28,7 @@ use crate::{
 /// This is a public key. _Should be distributed._
 ///
 /// You can extract a `PublicKey` by calling [`Self::from()`].
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PublicKey(Point);
 
 opaque_debug::implement!(PublicKey);
@@ -158,7 +159,7 @@ mod tests {
     use std::convert::TryFrom;
 
     use super::*;
-    
+
     #[cfg(feature = "std")]
     use rand_core::OsRng;
 

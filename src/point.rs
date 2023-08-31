@@ -20,6 +20,7 @@ use core::{
 use lazy_static::lazy_static;
 use num_bigint::{BigInt, Sign};
 use num_traits::{One, Zero};
+use serde::{Serialize, Deserialize};
 
 use crate::{Ed448Error, KEY_LENGTH};
 use subtle::{Choice, ConstantTimeEq};
@@ -60,7 +61,7 @@ lazy_static! {
     );
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Field(BigInt);
 
 impl Field {
@@ -248,7 +249,7 @@ impl Div<&'_ Field> for &'_ Field {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Point {
     x: Field,
     y: Field,
